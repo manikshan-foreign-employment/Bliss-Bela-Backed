@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bliss Bela Admin | Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf2f8', 100: '#fce7f3', 500: '#ec4899', 700: '#be185d', 900: '#111111', gold: '#d4af37', 
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #f8fafc; color: #0f172a; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #be185d; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9d174d; }
+        
+        .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .toast-enter { animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease forwards; }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
+
+        .loader { border-top-color: #be185d; -webkit-animation: spinner 1s linear infinite; animation: spinner 1s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="overflow-hidden flex h-screen w-full relative">
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 md:p-10 relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-brand-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
+            <div class="relative z-10 text-center mb-8">
+                <img src="image2.png" alt="Bliss Bela" class="h-12 mx-auto mb-4 object-contain" onerror="this.src='https://via.placeholder.com/150x50?text=Bliss+Bela'">
+                <h2 class="text-2xl font-extrabold text-brand-900">Admin Login</h2>
+                <p class="text-sm text-slate-500 mt-2">Sign in to manage your store securely.</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)" class="relative z-10 space-y-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email Address</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="email" id="loginEmail" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all text-sm font-medium text-brand-900" placeholder="admin@blissbela.com">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="password" id="loginPassword" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all text-sm font-medium text-brand-900" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-brand-900 text-white rounded-xl py-3.5 font-bold uppercase tracking-widest text-sm hover:bg-brand-700 transition-colors shadow-lg hover:shadow-xl mt-4 flex items-center justify-center">
+                    Sign In <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i>
+                </button>
+                <div id="loginError" class="text-xs text-rose-500 font-bold text-center mt-3 hidden">Invalid email or password.</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN ADMIN DASHBOARD -->
+    <div id="dashboard-container" class="flex w-full h-full opacity-0 pointer-events-none transition-opacity duration-300">
+        
+        <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col z-50 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shadow-2xl md:shadow-none">
+            <div class="h-24 sm:h-28 flex items-center justify-center px-4 border-b border-slate-200 relative overflow-hidden group bg-gradient-to-br from-white to-slate-50">
+                <div class="absolute -top-10 -left-10 w-32 h-32 bg-brand-100 rounded-full mix-blend-multiply filter blur-2xl opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-in-out"></div>
+                
+                <div class="relative z-10 flex items-center justify-center w-full h-full py-2 transform group-hover:scale-105 transition-transform duration-500">
+                    <img src="image2.png" alt="Bliss Bela" class="h-full max-h-[3.5rem] sm:max-h-[4.5rem] w-auto object-contain drop-shadow-sm group-hover:drop-shadow-lg transition-all duration-500" onerror="this.src='https://via.placeholder.com/150x50?text=Admin'">
+                </div>
+                
+                <button class="md:hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-brand-700 z-20 p-2 rounded-full bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm transition-all focus:outline-none" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <button onclick="switchTab('products')" id="nav-products" class="w-full flex items-center px-4 py-3.5 rounded-xl transition-all duration-200 text-sm bg-brand-50 text-brand-700 font-bold border-l-4 border-brand-700">
+                    <i class="fa-solid fa-box-open w-6 text-center mr-3 text-lg"></i> Products Catalog
+                </button>
+                <button onclick="switchTab('sell')" id="nav-sell" class="w-full flex items-center px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-brand-900 rounded-xl transition-all duration-200 text-sm font-medium border-l-4 border-transparent">
+                    <i class="fa-solid fa-cash-register w-6 text-center mr-3 text-lg"></i> Point of Sale (POS)
+                </button>
+                <button onclick="switchTab('orders')" id="nav-orders" class="w-full flex items-center px-4 py-3.5 text-slate-500 hover:bg-slate-50 hover:text-brand-900 rounded-xl transition-all duration-200 text-sm font-medium border-l-4 border-transparent relative">
+                    <i class="fa-solid fa-cart-shopping w-6 text-center mr-3 text-lg"></i> Orders Management
+                    <span id="new-order-badge" class="hidden absolute right-4 bg-brand-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">NEW</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-200 bg-slate-50">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center">
+                        <div class="h-8 w-8 bg-brand-100 text-brand-700 flex items-center justify-center rounded-full font-bold text-xs"><i class="fa-solid fa-user"></i></div>
+                        <div class="ml-2">
+                            <p class="text-xs font-bold text-brand-900 truncate w-32" id="admin-email-display">Admin</p>
+                            <p id="db-status" class="text-[10px] text-emerald-500 font-bold uppercase mt-0.5"><i class="fa-solid fa-circle-check"></i> Secure</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="w-full bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-lg py-2 text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center">
+                    <i class="fa-solid fa-power-off mr-2"></i> Log Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden relative bg-slate-50/50">
+            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 z-10 sticky top-0 shadow-sm">
+                <div class="flex items-center">
+                    <button onclick="toggleSidebar()" class="md:hidden text-slate-500 hover:text-brand-700 focus:outline-none mr-4 p-2 rounded-lg hover:bg-slate-100 transition-colors"><i class="fa-solid fa-bars text-xl"></i></button>
+                    <h1 id="page-title" class="text-lg sm:text-xl font-extrabold text-brand-900 tracking-tight">Products Management</h1>
+                </div>
+                <button onclick="openProductModal()" id="add-btn" class="bg-brand-900 hover:bg-brand-700 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-widest transition-all duration-200 flex items-center shadow-md hover:shadow-lg">
+                    <i class="fa-solid fa-plus mr-2"></i> Add Product
+                </button>
+            </header>
+
+            <!-- PRODUCTS VIEW -->
+            <div id="view-products" class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-brand-50 flex items-center justify-center text-brand-700 text-xl"><i class="fa-solid fa-box"></i></div>
+                        <div><p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Products</p><p class="text-2xl font-extrabold text-brand-900" id="total-products-count">0</p></div>
+                    </div>
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 text-xl"><i class="fa-solid fa-tags"></i></div>
+                        <div><p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Catalog Value</p><p class="text-xl font-extrabold text-brand-900 truncate" id="total-catalog-value">$ 0.00</p></div>
+                    </div>
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-xl"><i class="fa-solid fa-boxes-packing"></i></div>
+                        <div><p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Items Sold</p><p class="text-2xl font-extrabold text-brand-900" id="total-sold-qty">0</p></div>
+                    </div>
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 text-xl"><i class="fa-solid fa-chart-line"></i></div>
+                        <div><p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Revenue</p><p class="text-xl font-extrabold text-brand-900 truncate" id="total-revenue-value">$ 0.00</p></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-brand-900 tracking-tight">Product Inventory</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest font-bold border-b border-slate-200">
+                                    <th class="px-6 py-4">Product Detail</th>
+                                    <th class="px-6 py-4">Pricing</th>
+                                    <th class="px-6 py-4 text-center">Sold Qty</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-table-body" class="divide-y divide-slate-100">
+                                <tr><td colspan="5" class="px-6 py-12 text-center text-brand-700 text-sm font-medium"><div class="flex justify-center items-center gap-3"><div class="loader rounded-full border-2 border-t-2 border-brand-200 h-5 w-5"></div>Loading data...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SELL ITEMS VIEW (POS) -->
+            <div id="view-sell" class="hidden flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-8">
+                <div class="mb-6"><h2 class="text-xl font-extrabold text-brand-900">Point of Sale</h2></div>
+                <div id="sell-items-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+            </div>
+
+            <!-- ORDERS VIEW -->
+            <div id="view-orders" class="hidden flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-8">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 w-64 mb-6">
+                    <div class="h-12 w-12 rounded-full bg-brand-50 flex items-center justify-center text-brand-700 text-xl"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <div><p class="text-xs font-bold uppercase text-slate-400">Total Orders</p><p class="text-2xl font-extrabold text-brand-900" id="total-orders-count">0</p></div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-100"><h2 class="text-lg font-bold text-brand-900">Recent Orders</h2></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest font-bold border-b border-slate-200">
+                                    <th class="px-6 py-4">Order ID</th>
+                                    <th class="px-6 py-4">Customer</th>
+                                    <th class="px-6 py-4">Amount</th>
+                                    <th class="px-6 py-4">Date</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="fixed inset-0 z-[120] hidden bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0" onclick="closeProductModal()"></div>
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden modal-enter border border-slate-100 relative flex flex-col">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white z-10">
+                <h3 class="text-lg font-extrabold text-brand-900" id="modalTitle">Add New Product</h3>
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-brand-700 w-10 h-10 rounded-full hover:bg-brand-50 flex items-center justify-center"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 sm:p-8 overflow-y-auto flex-1 bg-slate-50/30">
+                <form id="productForm" onsubmit="handleProductSubmit(event)">
+                    <input type="hidden" id="productId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Title</label><input type="text" id="pTitle" required class="w-full px-4 py-2 border rounded-xl outline-none focus:border-brand-500 text-sm"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Price</label><input type="number" step="0.01" id="pPrice" required class="w-full px-4 py-2 border rounded-xl outline-none text-sm"></div>
+                                <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Sale Price</label><input type="number" step="0.01" id="pSalePrice" class="w-full px-4 py-2 border rounded-xl outline-none text-sm"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Category</label><select id="pCategory" class="w-full px-4 py-2 border rounded-xl outline-none text-sm"><option value="Skincare">Skincare</option><option value="Haircare">Haircare</option><option value="Makeup">Makeup</option><option value="Fragrance">Fragrance</option></select></div>
+                                <div><label class="block text-xs font-bold uppercase text-emerald-600 mb-1">Sold Qty</label><input type="number" id="pSoldQty" class="w-full px-4 py-2 border border-emerald-200 bg-emerald-50 rounded-xl outline-none text-sm" value="0"></div>
+                            </div>
+                            <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Colors/Variants</label><input type="text" id="pColors" class="w-full px-4 py-2 border rounded-xl outline-none text-sm"></div>
+                            <div class="flex items-center gap-2 pt-2"><input type="checkbox" id="pIsOnSale" class="w-4 h-4"><label class="text-sm font-bold text-brand-900">Enable Sale Pricing</label></div>
+                        </div>
+                        <div class="space-y-4 flex flex-col">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Image</label>
+                                <input type="file" id="pImageFile" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
+                                <label for="pImageFile" class="cursor-pointer block text-center py-2 bg-brand-50 border border-brand-200 border-dashed rounded-xl text-brand-700 text-xs font-bold uppercase mb-2">Select Image</label>
+                                <div class="w-full h-32 border-2 border-dashed border-slate-300 rounded-xl bg-white flex items-center justify-center overflow-hidden"><img id="imgPreview" src="" class="h-full object-contain hidden p-2"><span id="imgPlaceholder" class="text-slate-400 text-xs font-bold">PREVIEW</span></div>
+                            </div>
+                            <div class="flex-1 flex flex-col"><label class="block text-xs font-bold uppercase text-slate-500 mb-1">Description</label><textarea id="pDescription" required class="flex-1 w-full px-4 py-2 border rounded-xl outline-none text-sm resize-none"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-200 flex justify-end gap-3"><button type="button" onclick="closeProductModal()" class="px-5 py-2 border rounded-xl text-sm font-bold">Cancel</button><button type="submit" id="saveBtn" class="px-5 py-2 bg-brand-900 text-white rounded-xl text-sm font-bold">Save</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-6 right-4 z-[200] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Firebase SDK (Added Auth) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCsweqwn7454QwPHZWyIJYcd-uDO7SAdHM",
+            authDomain: "e-commerce-websites-2a3c1.firebaseapp.com",
+            projectId: "e-commerce-websites-2a3c1",
+            storageBucket: "e-commerce-websites-2a3c1.firebasestorage.app",
+            messagingSenderId: "866662908670",
+            appId: "1:866662908670:web:5f082ca5f6ada6ea02dbaf"
+        };
+
+        let db;
+        let auth;
+        let products = [];
+        let orders = [];
+        let currentBase64Image = '';
+        let unsubProducts, unsubOrders;
+
+        window.formatMoney = function(amount) { return '$ ' + Number(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
+
+        // Toast logic
+        window.showToast = function(title, message, isAlert = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = isAlert ? 'bg-rose-500' : 'bg-emerald-500';
+            toast.className = `${bg} text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 toast-enter w-[300px] pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${isAlert?'fa-circle-exclamation':'fa-circle-check'} text-xl"></i><div><h4 class="text-sm font-bold">${title}</h4><p class="text-xs opacity-90">${message}</p></div>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); }, 3000);
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // --- AUTHENTICATION LOGIC ---
+        onAuthStateChanged(auth, (user) => {
+            const loginOverlay = document.getElementById('login-overlay');
+            const dashboard = document.getElementById('dashboard-container');
+            
+            if (user) {
+                // User is signed in.
+                document.getElementById('admin-email-display').innerText = user.email;
+                loginOverlay.classList.add('opacity-0', 'pointer-events-none');
+                dashboard.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // Fetch data only after login
+                fetchData();
+            } else {
+                // User is signed out.
+                loginOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                dashboard.classList.add('opacity-0', 'pointer-events-none');
+                
+                // Cleanup listeners
+                if(unsubProducts) unsubProducts();
+                if(unsubOrders) unsubOrders();
+            }
+        });
+
+        window.handleLogin = function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errBox = document.getElementById('loginError');
+            btn.innerHTML = '<div class="loader rounded-full border-2 border-t-2 border-white h-4 w-4 mr-2"></div> Logging in...';
+            btn.disabled = true;
+            errBox.classList.add('hidden');
+
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+
+            signInWithEmailAndPassword(auth, email, pass)
+                .then(() => {
+                    btn.innerHTML = 'Sign In <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i>';
+                    btn.disabled = false;
+                    document.getElementById('loginForm').reset();
+                })
+                .catch((error) => {
+                    btn.innerHTML = 'Sign In <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i>';
+                    btn.disabled = false;
+                    errBox.classList.remove('hidden');
+                    console.error(error.message);
+                });
+        };
+
+        window.handleLogout = function() {
+            signOut(auth).then(() => {
+                window.showToast("Logged Out", "You have been securely signed out.");
+            });
+        };
+
+        // --- DATA FETCHING ---
+        function fetchData() {
+            unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
+                products = [];
+                snapshot.forEach((doc) => { products.push({ id: doc.id, ...doc.data() }); });
+                renderProducts(); renderSellItems();
+            });
+
+            unsubOrders = onSnapshot(collection(db, "orders"), (snapshot) => {
+                orders = [];
+                snapshot.forEach((doc) => { orders.push({ id: doc.id, ...doc.data() }); });
+                orders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                renderOrders();
+            });
+        }
+
+        // --- UI TOGGLES ---
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        };
+
+        window.switchTab = function(tabName) {
+            const views = ['products', 'sell', 'orders'];
+            views.forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+                document.getElementById(`nav-${v}`).classList.remove('bg-brand-50', 'text-brand-700', 'border-brand-700');
+                document.getElementById(`nav-${v}`).classList.add('text-slate-500', 'border-transparent');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).classList.add('bg-brand-50', 'text-brand-700', 'border-brand-700');
+            document.getElementById(`nav-${tabName}`).classList.remove('text-slate-500', 'border-transparent');
+            document.getElementById('add-btn').style.display = tabName === 'products' ? 'flex' : 'none';
+        };
+
+        // --- RENDER LOGIC ---
+        function renderProducts() {
+            const tbody = document.getElementById('product-table-body');
+            tbody.innerHTML = '';
+            let tVal=0, tSold=0, tRev=0;
+            if (products.length === 0) tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">No products found.</td></tr>`;
+            
+            products.forEach(p => {
+                const pr = p.price||0; const sPr = p.salePrice||0; const actPr = (p.isOnSale&&sPr)?sPr:pr; const sq = p.soldQuantity||0;
+                tVal+=pr; tSold+=sq; tRev+=(sq*actPr);
+                tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="px-6 py-4 flex gap-3"><img src="${p.imageUrl||''}" class="w-10 h-10 object-contain rounded border"><div><p class="font-bold text-sm">${p.title}</p><p class="text-[10px] uppercase text-brand-700">${p.category}</p></div></td>
+                    <td class="px-6 py-4 font-bold text-sm">${formatMoney(actPr)}</td>
+                    <td class="px-6 py-4 text-center font-bold text-emerald-600">${sq}</td>
+                    <td class="px-6 py-4 text-xs font-bold">${p.isOnSale?'<span class="text-brand-700">SALE</span>':'<span class="text-slate-500">STANDARD</span>'}</td>
+                    <td class="px-6 py-4 text-right"><button onclick="window.editProduct('${p.id}')" class="text-brand-700 px-2"><i class="fa-solid fa-pen"></i></button><button onclick="window.deleteProduct('${p.id}')" class="text-rose-600 px-2"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+            document.getElementById('total-products-count').innerText = products.length; document.getElementById('total-catalog-value').innerText = formatMoney(tVal);
+            document.getElementById('total-sold-qty').innerText = tSold; document.getElementById('total-revenue-value').innerText = formatMoney(tRev);
+        }
+
+        function renderSellItems() {
+            const grid = document.getElementById('sell-items-grid'); grid.innerHTML = '';
+            products.forEach(p => {
+                const actPr = (p.isOnSale&&p.salePrice)?p.salePrice:p.price;
+                grid.innerHTML += `<div class="bg-white rounded-xl border p-4 text-center shadow-sm">
+                    <img src="${p.imageUrl}" class="h-24 mx-auto mb-2 object-contain">
+                    <p class="text-xs font-bold truncate">${p.title}</p>
+                    <p class="font-extrabold text-brand-900 mt-1">${formatMoney(actPr)}</p>
+                    <button onclick="window.sellProduct('${p.id}')" class="w-full bg-emerald-50 text-emerald-700 text-xs font-bold py-2 mt-3 rounded hover:bg-emerald-100">SELL (+1)</button>
+                </div>`;
+            });
+        }
+
+        function renderOrders() {
+            const tbody = document.getElementById('order-table-body'); tbody.innerHTML = '';
+            document.getElementById('total-orders-count').innerText = orders.length;
+            orders.forEach(o => {
+                tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="px-6 py-4 text-xs font-bold">#${o.id.substring(0,8).toUpperCase()}</td>
+                    <td class="px-6 py-4 text-sm"><span class="font-bold">${o.customerName||'Guest'}</span><br><span class="text-xs text-slate-500">${o.email||'N/A'}</span></td>
+                    <td class="px-6 py-4 font-bold text-brand-900">${formatMoney(o.total||0)}</td>
+                    <td class="px-6 py-4 text-xs">${new Date(o.createdAt).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-xs font-bold text-brand-700">${o.status||'Processing'}</td>
+                    <td class="px-6 py-4 text-right"><button onclick="window.deleteOrder('${o.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+
+        // --- ACTIONS ---
+        window.sellProduct = async function(id) {
+            const p = products.find(x => x.id === id); if(!p) return;
+            await updateDoc(doc(db, "products", id), { soldQuantity: (p.soldQuantity||0) + 1 });
+            window.showToast("Sold", `1x ${p.title} sold.`);
+        };
+        window.deleteProduct = async function(id) { if(confirm("Delete product?")) await deleteDoc(doc(db, "products", id)); };
+        window.deleteOrder = async function(id) { if(confirm("Delete order?")) await deleteDoc(doc(db, "orders", id)); };
+
+        // Modal Logic
+        window.openProductModal = function() {
+            document.getElementById('productForm').reset(); document.getElementById('productId').value = '';
+            currentBase64Image = ''; window.previewImage(''); document.getElementById('productModal').classList.remove('hidden');
+        };
+        window.closeProductModal = function() { document.getElementById('productModal').classList.add('hidden'); };
+        window.editProduct = function(id) {
+            const p = products.find(x => x.id === id); if(!p) return;
+            document.getElementById('productId').value = p.id; document.getElementById('pTitle').value = p.title;
+            document.getElementById('pPrice').value = p.price; document.getElementById('pSalePrice').value = p.salePrice||'';
+            document.getElementById('pCategory').value = p.category; document.getElementById('pSoldQty').value = p.soldQuantity||0;
+            document.getElementById('pColors').value = p.colors||''; document.getElementById('pIsOnSale').checked = p.isOnSale;
+            document.getElementById('pDescription').value = p.description||'';
+            currentBase64Image = p.imageUrl||''; window.previewImage(currentBase64Image);
+            document.getElementById('productModal').classList.remove('hidden');
+        };
+
+        window.handleImageUpload = function(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const r = new FileReader();
+            r.onload = function(ev) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 500; canvas.height = img.height * (500/img.width);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    currentBase64Image = canvas.toDataURL('image/jpeg', 0.8);
+                    window.previewImage(currentBase64Image);
+                };
+                img.src = ev.target.result;
+            };
+            r.readAsDataURL(file);
+        };
+        window.previewImage = function(url) {
+            if(url) { document.getElementById('imgPreview').src = url; document.getElementById('imgPreview').classList.remove('hidden'); document.getElementById('imgPlaceholder').classList.add('hidden'); }
+            else { document.getElementById('imgPreview').classList.add('hidden'); document.getElementById('imgPlaceholder').classList.remove('hidden'); }
+        };
+
+        window.handleProductSubmit = async function(e) {
+            e.preventDefault(); if(!currentBase64Image) return window.showToast("Error", "Add an image", true);
+            document.getElementById('saveBtn').disabled = true; document.getElementById('saveBtn').innerText = "Saving...";
+            const id = document.getElementById('productId').value;
+            const data = {
+                title: document.getElementById('pTitle').value, price: parseFloat(document.getElementById('pPrice').value)||0,
+                salePrice: document.getElementById('pSalePrice').value ? parseFloat(document.getElementById('pSalePrice').value) : null,
+                category: document.getElementById('pCategory').value, soldQuantity: parseInt(document.getElementById('pSoldQty').value)||0,
+                colors: document.getElementById('pColors').value, isOnSale: document.getElementById('pIsOnSale').checked,
+                imageUrl: currentBase64Image, description: document.getElementById('pDescription').value, updatedAt: new Date().toISOString()
+            };
+            try {
+                if(id) await updateDoc(doc(db, "products", id), data); else { data.createdAt = new Date().toISOString(); await addDoc(collection(db, "products"), data); }
+                window.closeProductModal(); window.showToast("Success", "Product saved!");
+            } catch(e) { window.showToast("Error", e.message, true); }
+            finally { document.getElementById('saveBtn').disabled = false; document.getElementById('saveBtn').innerText = "Save"; }
+        };
+    </script>
+</body>
+</html>
